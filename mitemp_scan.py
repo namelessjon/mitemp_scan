@@ -36,33 +36,37 @@ def write_readings(connection_string, sensor_name, readings):
             conn.close()
 
 
+def main():
 
-poller = MiTempBtPoller(bt_mac, BluepyBackend, cache_timeout=240)
+    poller = MiTempBtPoller(bt_mac, BluepyBackend, cache_timeout=240)
 
-with open("mitemp.log", "a", buffering = 1) as fout:
-    while True:
-        start = time.monotonic()
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
-        try:
-            temp = poller.parameter_value('temperature')
-            humid = poller.parameter_value('humidity')
-            battery = poller.parameter_value('battery')
-        except Exception as e:
-            logger.error("Failed to connect to sensor (%s)", str(e))
-            time.sleep(60)
-            continue
+    with open("mitemp.log", "a", buffering=1) as fout:
+        while True:
+            start = time.monotonic()
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+            try:
+                temp = poller.parameter_value('temperature')
+                humid = poller.parameter_value('humidity')
+                battery = poller.parameter_value('battery')
+            except Exception as e:
+                logger.error("Failed to connect to sensor (%s)", str(e))
+                time.sleep(60)
+                continue
 
-        tsv = f"{timestamp}\t{temp}\t{humid}\t{battery}"
-        print(tsv)
-        fout.write(f"{tsv}\n")
-        try:
-            write_readings(os.environ['DATABASE_DSN'],
-                sensor_id,
-                {'temperature': temp, 'humidity': humid, 'battery': battery})
-        except:
-            logger.exception("Failed to write to DB")
-        end = time.monotonic()
-        duration = end - start
+            tsv = f"{timestamp}\t{temp}\t{humid}\t{battery}"
+            print(tsv)
+            fout.write(f"{tsv}\n")
+            try:
+                write_readings(os.environ['DATABASE_DSN'],
+                    sensor_id,
+                    {'temperature': temp, 'humidity': humid, 'battery': battery})
+            except:
+                logger.exception("Failed to write to DB")
+            end = time.monotonic()
+            duration = end - start
 
-        time.sleep(60*5 - min(duration, 60))
+            time.sleep(60*5 - min(duration, 60))
 
+
+if __name__ == '__main__':
+    main()
