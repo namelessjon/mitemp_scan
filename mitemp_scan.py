@@ -10,6 +10,7 @@ import psycopg2
 import os
 import yaml
 import sys
+import json
 
 logger = logging.getLogger('mitemp_scan')
 
