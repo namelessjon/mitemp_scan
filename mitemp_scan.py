@@ -82,7 +82,8 @@ class XaomiSensor(object):
             readings['readings'] = measures
             return readings
         except Exception as e:
-            logger.error("Failed to connect to sensor (%s)", str(e))
+            logger.error("Failed to connect to sensor %s: %s",
+                         self.name, str(e))
             return None
 
 
