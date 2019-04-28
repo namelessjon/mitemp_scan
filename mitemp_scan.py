@@ -7,6 +7,7 @@ from btlewrap.bluepy import BluepyBackend
 import time
 import logging
 import psycopg2
+import psycopg2.extras
 import os
 import yaml
 import sys
@@ -33,7 +34,7 @@ def _write_many_sensor_readings(cursor, sensor_id, readings):
     template = "(%(timestamp)s, %(sensor_id)s, %(measure_type)s, %(reading)s)"
     form_readings = format_sensor_readings(sensor_id, readings)
     psycopg2.extras.execute_values(
-            cursor=cursor,
+            cur=cursor,
             sql=sql,
             argslist=form_readings,
             template=template,
