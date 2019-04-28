@@ -124,7 +124,7 @@ def main(config_file):
     while True:
         start = time.monotonic()
 
-        for (name, sensor) in sensors:
+        for (name, sensor) in sensors.items():
             readings = sensor.read()
             if readings:
                 print(json.dumps(readings))
