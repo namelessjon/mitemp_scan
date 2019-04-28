@@ -60,7 +60,7 @@ def write_readings(connection_string, readings):
 
 def read_config_file(config_file):
     with open(config_file, "r") as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 
 class XaomiSensor(object):
