@@ -13,6 +13,7 @@ import yaml
 import sys
 import json
 import random
+import datetime
 
 logger = logging.getLogger('mitemp_scan')
 
@@ -75,7 +76,7 @@ class XaomiSensor(object):
             self._measurements = ['temperature', 'humidity', 'battery']
 
     def read(self):
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         try:
             readings = {
                         'name': self.name,
