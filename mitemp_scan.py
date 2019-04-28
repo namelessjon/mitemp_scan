@@ -1,6 +1,6 @@
 """Poll a number of Xaomi MiTemp sensors"""
 
-__version__ = "0.3"
+__version__ = "0.3.1"
 
 from mitemp_bt.mitemp_bt_poller import MiTempBtPoller
 from btlewrap.bluepy import BluepyBackend
@@ -11,6 +11,7 @@ import os
 import yaml
 import sys
 import json
+import random
 
 logger = logging.getLogger('mitemp_scan')
 
