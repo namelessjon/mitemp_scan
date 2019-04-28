@@ -1,6 +1,6 @@
 """Poll a number of Xaomi MiTemp sensors"""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 from mitemp_bt.mitemp_bt_poller import MiTempBtPoller
 from btlewrap.bluepy import BluepyBackend
@@ -137,6 +137,7 @@ def main(config_file):
                     try:
                         write_readings(os.environ['DATABASE_DSN'],
                                        readings)
+                        break
                     except Exception:
                         logger.exception("Failed to write to DB")
                         sleep_time = random.uniform(1, 2**attempt)
