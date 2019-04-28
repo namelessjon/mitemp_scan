@@ -143,9 +143,13 @@ def main(config_file):
         time.sleep(default_interval - min(duration, 60))
 
 
-if __name__ == '__main__':
+def cli():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('config_file', help="The YAML config file")
     args = parser.parse_args()
     main(args.config_file)
+
+
+if __name__ == '__main__':
+    cli()

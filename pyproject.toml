@@ -7,3 +7,5 @@ module = "mitemp_scan"
 author = "Jon"
 author-email = "jonathan.stott@gmail.com"
 
+[tool.flit.scripts]
+mitemp_scan = "mitemp_scan:cli"
