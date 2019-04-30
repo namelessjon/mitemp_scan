@@ -132,7 +132,7 @@ def main(config_file):
         for (name, sensor) in sensors.items():
             readings = sensor.read()
             if readings:
-                print(json.dumps(readings))
+                print(json.dumps(readings), flush=True)
                 for attempt in range(1, 6):
                     try:
                         write_readings(os.environ['DATABASE_DSN'],
