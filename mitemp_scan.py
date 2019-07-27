@@ -14,7 +14,8 @@ import sys
 import json
 import random
 import datetime
-from typing import Dict
+import itertools
+from typing import Dict, Any, List
 
 logger = logging.getLogger('mitemp_scan')
 
@@ -28,17 +29,43 @@ def format_sensor_readings(sensor_id: int, readings: Dict[str, float]):
     return reading_array
 
 
-def _write_many_sensor_readings(cursor, sensor_id: int, readings: Dict[str, float]):
+def format_multiple_readings(cursor, readings:List[Dict[str, Any]]):
+    name_map = {}
+
+    # format readings into list of lists
+    formated_readings = [format_one_reading(cursor, name_map, r) for r in readings]
+
+    # flatten the list
+    return list(itertools.chain.from_iterable(formated_readings))
+
+
+def format_one_reading(cursor, name_map, reading):
+    sensor_name = reading['name']
+    sensor_id = _lookup_sensor(cursor, name_map, sensor_name)
+
+    return format_sensor_readings(sensor_id, reading)
+
+
+def _lookup_sensor(cursor, name_map: Dict[str, int], sensor_name: str) -> int:
+    if sensor_name in name_map:
+        sensor_id = name_map[sensor_name]
+    else:
+        sensor_id = _find_sensor(cursor, sensor_name)
+        name_map[sensor_name] = sensor_id
+    return sensor_id
+
+
+
+def _write_many_sensor_readings(cursor, readings: List[Dict[str, Any]]):
     sql = """
     INSERT INTO sensor_readings(time, sensor_id, measure_type, reading)
     VALUES %s
     """
     template = "(%(timestamp)s, %(sensor_id)s, %(measure_type)s, %(reading)s)"
-    form_readings = format_sensor_readings(sensor_id, readings)
     psycopg2.extras.execute_values(
             cur=cursor,
             sql=sql,
-            argslist=form_readings,
+            argslist=readings,
             template=template,
             )
 
@@ -46,18 +73,21 @@ def _write_many_sensor_readings(cursor, sensor_id: int, readings: Dict[str, floa
 def _find_sensor(cursor, sensor_name: str) -> int:
     id = cursor.execute("SELECT id FROM sensors WHERE sensor = %s",
             (sensor_name,))
-    id = cursor.fetchone()
+    id = cursor.fetchone()[0]
     return id
 
 
 def write_readings(connection_string: str, readings: Dict[str, float]):
+    write_many_readings(connection_string, [readings])
+
+
+def write_many_readings(connection_string: str, readings: List[Dict[str, float]]):
     conn = None
-    sensor_name = readings['name']
     try:
         conn = psycopg2.connect(connection_string)
         with conn, conn.cursor() as cur:
-            sensor = _find_sensor(cur, sensor_name)
-            _write_many_sensor_readings(cur, sensor, readings)
+            r = format_multiple_readings(cur, readings)
+            _write_many_sensor_readings(cur, r)
     finally:
         if conn:
             conn.close()
