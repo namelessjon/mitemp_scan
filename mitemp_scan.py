@@ -14,11 +14,12 @@ import sys
 import json
 import random
 import datetime
+from typing import Dict
 
 logger = logging.getLogger('mitemp_scan')
 
 
-def format_sensor_readings(sensor_id, readings):
+def format_sensor_readings(sensor_id: int, readings: Dict[str, float]):
     reading_id = {
                     'sensor_id': sensor_id,
                     'timestamp': readings['timestamp'],
@@ -27,7 +28,7 @@ def format_sensor_readings(sensor_id, readings):
     return reading_array
 
 
-def _write_many_sensor_readings(cursor, sensor_id, readings):
+def _write_many_sensor_readings(cursor, sensor_id: int, readings: Dict[str, float]):
     sql = """
     INSERT INTO sensor_readings(time, sensor_id, measure_type, reading)
     VALUES %s
@@ -42,14 +43,14 @@ def _write_many_sensor_readings(cursor, sensor_id, readings):
             )
 
 
-def _find_sensor(cursor, sensor_name):
+def _find_sensor(cursor, sensor_name: str) -> int:
     id = cursor.execute("SELECT id FROM sensors WHERE sensor = %s",
             (sensor_name,))
     id = cursor.fetchone()
     return id
 
 
-def write_readings(connection_string, readings):
+def write_readings(connection_string: str, readings: Dict[str, float]):
     conn = None
     sensor_name = readings['name']
     try:
@@ -62,13 +63,13 @@ def write_readings(connection_string, readings):
             conn.close()
 
 
-def read_config_file(config_file):
+def read_config_file(config_file: str):
     with open(config_file, "r") as f:
         return yaml.safe_load(f)
 
 
 class XaomiSensor(object):
-    def __init__(self, name, poller, measurements):
+    def __init__(self, name: str, poller, measurements):
         self.name = name
         self._poller = poller
         self._measurements = measurements
