@@ -19,8 +19,9 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger('mitemp_scan')
 
+Readings = Dict[str, float]
 
-def format_sensor_readings(sensor_id: int, readings: Dict[str, float]):
+def format_sensor_readings(sensor_id: int, readings: Readings):
     reading_id = {
                     'sensor_id': sensor_id,
                     'timestamp': readings['timestamp'],
@@ -77,11 +78,11 @@ def _find_sensor(cursor, sensor_name: str) -> int:
     return id
 
 
-def write_readings(connection_string: str, readings: Dict[str, float]):
+def write_readings(connection_string: str, readings: Readings):
     write_many_readings(connection_string, [readings])
 
 
-def write_many_readings(connection_string: str, readings: List[Dict[str, float]]):
+def write_many_readings(connection_string: str, readings: List[Readings]):
     conn = None
     try:
         conn = psycopg2.connect(connection_string)
@@ -93,7 +94,7 @@ def write_many_readings(connection_string: str, readings: List[Dict[str, float]]
             conn.close()
 
 
-def read_config_file(config_file: str):
+def read_config_file(config_file: str) -> Dict[str, Any]:
     with open(config_file, "r") as f:
         return yaml.safe_load(f)
 
