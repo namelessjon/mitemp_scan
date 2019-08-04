@@ -1,0 +1,43 @@
+[Unit]
+Description=Poll Xaomi sensors for temp etc
+Wants=bluetooth.service
+After=bluetooth.service
+
+
+[Service]
+Type=simple
+; keeps options off the commandline
+EnvironmentFile=/etc/default/mitemp_scan
+ExecStart=/usr/local/bin/mitemp_scan $ARGS
+Restart=on-failure
+RestartSec=20
+
+; run as a nobody
+User=mitemp_scan
+
+; run with a private version of /tmp
+PrivateTmp=true
+
+; run with a minimal /dev
+PrivateDevices=true
+
+; Make /etc, /boot read only
+ProtectSystem=strict
+
+; make /home, /root, /run/user inaccessible to the script
+ProtectHome=true
+
+; lock service out of mount points too
+InaccessiblePaths=-/mnt -/data -/var
+
+; Also, don't allow it to ever become root again
+NoNewPrivileges=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+
+;AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target
+
