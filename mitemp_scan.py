@@ -1,43 +1,69 @@
 """Poll a number of Xaomi MiTemp sensors"""
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 from mitemp_bt.mitemp_bt_poller import MiTempBtPoller
 from btlewrap.bluepy import BluepyBackend
-import time
 import logging
 import psycopg2
 import psycopg2.extras
 import os
 import yaml
-import sys
 import json
+import sys
 import random
 import datetime
-import itertools
-from typing import Dict, Any, List
+from dataclasses import dataclass, asdict
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger('mitemp_scan')
 
-Readings = Dict[str, float]
 
-def format_sensor_readings(sensor_id: int, readings: Readings):
-    reading_id = {
-                    'sensor_id': sensor_id,
-                    'timestamp': readings['timestamp'],
-                }
-    reading_array = [dict(measure_type=k, reading=v, **reading_id) for k, v in readings['readings'].items()]
-    return reading_array
+@dataclass(frozen=True)
+class XaomiReadings:
+    __slots__ = ['name', 'location', 'timestamp', 'temperature', 'humidity', 'battery']
+
+    name: str
+    location: str
+    timestamp: str
+    temperature: float
+    humidity: float
+    battery: float
+
+    reading_types = ('temperature', 'humidity', 'battery')
+
+    def format(self, sensor_id: int) -> Dict[str, Any]:
+        d = asdict(self)
+        del d['name']
+        d['sensor_id'] = sensor_id
+        return d
+
+    @property
+    def asjson(self):
+        """
+        Returns dictionary suitable for json serializing
+
+        Preserves the history formatting
+        """
+        return {
+            'name': self.name,
+            'location': self.location,
+            'timestamp': self.timestamp,
+            'readings': { r: getattr(self, r) for r in self.reading_types },
+        }
 
 
-def format_multiple_readings(cursor, readings:List[Dict[str, Any]]):
+def format_sensor_readings(sensor_id: int, readings: XaomiReadings):
+    return readings.format(sensor_id)
+
+
+def format_multiple_readings(cursor, readings: List[XaomiReadings]):
     name_map = {}
 
     # format readings into list of lists
-    formated_readings = [format_one_reading(cursor, name_map, r) for r in readings]
+    formatted_readings = [format_one_reading(cursor, name_map, r) for r in readings]
 
-    # flatten the list
-    return list(itertools.chain.from_iterable(formated_readings))
+    return formatted_readings
 
 
 def format_one_reading(cursor, name_map, reading):
@@ -58,14 +84,16 @@ def _lookup_sensor(cursor, name_map: Dict[str, int], sensor_name: str) -> int:
 
 
 def _write_many_sensor_readings(cursor, readings: List[Dict[str, Any]]):
-    sql = """
-    INSERT INTO sensor_readings(time, sensor_id, measure_type, reading)
+
+    stmt = """
+    INSERT INTO sensor_measurements(time, sensor_id, location, temperature, humidity, battery)
     VALUES %s
     """
-    template = "(%(timestamp)s, %(sensor_id)s, %(measure_type)s, %(reading)s)"
+
+    template = "(%(timestamp)s, %(sensor_id)s, %(location)s, %(temperature)s, %(humidity)s, %(battery)s)"
     psycopg2.extras.execute_values(
             cur=cursor,
-            sql=sql,
+            sql=stmt,
             argslist=readings,
             template=template,
             )
@@ -78,12 +106,13 @@ def _find_sensor(cursor, sensor_name: str) -> int:
     return id
 
 
-def write_readings(connection_string: str, readings: Readings):
+def write_readings(connection_string: str, readings: XaomiReadings):
     write_many_readings(connection_string, [readings])
 
 
-def write_many_readings(connection_string: str, readings: List[Readings]):
+def write_many_readings(connection_string: str, readings: List[XaomiReadings]):
     conn = None
+
     try:
         conn = psycopg2.connect(connection_string)
         with conn, conn.cursor() as cur:
@@ -100,8 +129,9 @@ def read_config_file(config_file: str) -> Dict[str, Any]:
 
 
 class XaomiSensor(object):
-    def __init__(self, name: str, poller, measurements):
+    def __init__(self, name: str, location: str, poller, measurements):
         self.name = name
+        self.location = location
         self._poller = poller
         self._measurements = measurements
         if self._measurements is None:
@@ -110,12 +140,13 @@ class XaomiSensor(object):
     def read(self):
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         try:
-            readings = {
-                        'name': self.name,
-                        'timestamp': timestamp,
-                    }
             measures = {m: self._poller.parameter_value(m) for m in self._measurements}
-            readings['readings'] = measures
+            readings = XaomiReadings(
+                name=self.name,
+                timestamp=timestamp,
+                location=self.location,
+                **measures
+            )
             return readings
         except Exception as e:
             logger.error("Failed to connect to sensor %s: %s",
@@ -130,6 +161,7 @@ def create_xaomi_poller(sensor, default_interval=300):
                                 BluepyBackend,
                                 cache_timeout=timeout)
         return XaomiSensor(sensor['name'],
+                           sensor['location'],
                            poller,
                            sensor.get('measures'))
     else:
@@ -164,7 +196,7 @@ def main(config_file):
         for (name, sensor) in sensors.items():
             readings = sensor.read()
             if readings:
-                print(json.dumps(readings), flush=True)
+                print(json.dumps(readings.asjson), flush=True)
                 for attempt in range(1, 6):
                     try:
                         write_readings(os.environ['DATABASE_DSN'],

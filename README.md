@@ -9,6 +9,7 @@ An example sensor config looks like:
 default_interval: 300 # seconds
 sensors:
   - name: xaomi-4C:65:A8:D9:B3:86
+    location: Kitchen
     type: xaomi_mitemp
     measure:
       - temperature
