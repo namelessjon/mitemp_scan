@@ -1,6 +1,6 @@
 """Poll a number of Xaomi MiTemp sensors"""
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 from mitemp_bt.mitemp_bt_poller import MiTempBtPoller
 from btlewrap.bluepy import BluepyBackend
@@ -68,7 +68,7 @@ def format_multiple_readings(cursor, readings: List[XaomiReadings]):
 
 
 def format_one_reading(cursor, name_map, reading):
-    sensor_name = reading['name']
+    sensor_name = reading.name
     sensor_id = _lookup_sensor(cursor, name_map, sensor_name)
 
     return format_sensor_readings(sensor_id, reading)
